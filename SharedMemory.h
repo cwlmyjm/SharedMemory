@@ -30,7 +30,7 @@ SharedMemory<T>::SharedMemory(const char* s_name, bool s_writeable) : s_writeabl
 
 		s_mapHandle = CreateFileMapping(s_fileHandle, NULL, PAGE_READWRITE, 0, sizeof(T), s_name);
 
-		if (s_fileHandle == nullptr) {
+		if (s_mapHandle == nullptr) {
 			throw - 2;
 		}
 
@@ -60,7 +60,7 @@ template<typename T>
 SharedMemory<T>::~SharedMemory()
 {
 	// 释放共享内存
-	if (s_shareData != nullptr) UnmapViewOfFile(s_shareData);
+	if (s_sharedData != nullptr) UnmapViewOfFile(s_sharedData);
 
 	// 关闭对象句柄
 	if (s_mapHandle != nullptr) CloseHandle(s_mapHandle);
