@@ -8,11 +8,17 @@ enum Permission {
 	OPEN_R,
 };
 
+#ifdef UNICODE
+#define _CHAR wchar_t
+#else
+#define _CHAR char
+#endif
+
 template<typename T>
 class SharedMemory
 {
 public:
-	SharedMemory(const char* s_name, Permission s_permission);
+	SharedMemory(const _CHAR* s_name, Permission s_permission);
 	~SharedMemory();
 
 	bool read(T* output);
@@ -24,10 +30,10 @@ private:
 };
 
 template<typename T>
-SharedMemory<T>::SharedMemory(const char* s_name, Permission s_permission)
-	: s_writeable(s_permission == Create_RW || s_permission == Open_RW)
+SharedMemory<T>::SharedMemory(const _CHAR* s_name, Permission s_permission)
+	: s_writeable(s_permission == CREATE_RW || s_permission == OPEN_RW)
 {
-	if (s_permission == Create_RW || s_permission == Create_R) {
+	if (s_permission == CREATE_RW || s_permission == CREATE_R) {
 		s_mapHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(T), s_name);
 	}
 	else {
