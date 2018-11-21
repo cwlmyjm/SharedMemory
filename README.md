@@ -18,9 +18,9 @@ Example one
     struct TenBytes{
         char[10] data;
     }
-    SharedMemory<TenBytes> sm;
+    SharedMemory<TenBytes> sm("SharedMemory", CREATE_RW);
 Example two
-    SharedMemory<char[10]> sm;
+    SharedMemory<char[10]> sm("SharedMemory", CREATE_RW);
 ```
 
 ## How to use it?
