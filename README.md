@@ -7,6 +7,22 @@ A: This is a template for shared memory.
 Q: How many platforms it support?  
 A: It only support Windows now.
 
+Q: Does it has mutex in reading or writing?  
+A: No, you can implement mutex by yourself.
+
+Q: How to create a SharedMemory with specific length, like 10 bytes?  
+A: Define a struct contian 10 bytes or use char\[10\] as T.
+
+```
+Example one
+    struct TenBytes{
+        char[10] data;
+    }
+    SharedMemory<TenBytes> sm;
+Example two
+    SharedMemory<char[10]> sm;
+```
+
 ## How to use it?
 
 ```
