@@ -5,7 +5,7 @@ Q: What does the header do?
 A: This is a template for shared memory.
 
 Q: How many platforms it support?  
-A: It only support Win now.
+A: It only support Windows now.
 
 ## How to use it?
 
