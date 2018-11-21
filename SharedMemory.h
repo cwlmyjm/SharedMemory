@@ -1,5 +1,7 @@
-﻿#pragma once
-#include <Windows.h>
+#pragma once
+#include <sys/types.h>
+#include <sys/shm.h>
+#include <memory.h>
 
 enum Permission {
 	CREATE_RW,
@@ -8,60 +10,57 @@ enum Permission {
 	OPEN_R,
 };
 
-#ifdef UNICODE
-#define _CHAR wchar_t
-#else
-#define _CHAR char
-#endif
-
 template<typename T>
 class SharedMemory
 {
 public:
-	SharedMemory(const _CHAR* s_name, Permission s_permission);
+	SharedMemory(const char* s_name, int s_id, Permission s_permission);
+	SharedMemory(key_t s_key, Permission s_permission);
 	~SharedMemory();
 
 	bool read(T* output);
 	bool write(T* input);
 private:
 	bool s_writeable;
-	HANDLE s_mapHandle;
+	key_t s_fileHandle;
+	int s_mapHandle;
 	T* s_sharedData;
+
+	void init();
 };
 
 template<typename T>
-SharedMemory<T>::SharedMemory(const _CHAR* s_name, Permission s_permission)
+SharedMemory<T>::SharedMemory(const char* s_name, int s_id, Permission s_permission)
 	: s_writeable(s_permission == CREATE_RW || s_permission == OPEN_RW)
 {
-	if (s_permission == CREATE_RW || s_permission == CREATE_R) {
-		s_mapHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(T), s_name);
-	}
-	else {
-		s_mapHandle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, s_name);
-	}
-	if (s_mapHandle == nullptr) {
-		throw - 2;
-	}
+    /*Here the file must exist */
+    if ((s_fileHandle = ftok(s_name, s_id)) == -1) 
+    {
+        throw -1;
+    }
+    init();
+}
 
-	if (s_writeable) {
-		s_sharedData = (T*)MapViewOfFile(s_mapHandle, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(T));
-	}
-	else {
-		s_sharedData = (T*)MapViewOfFile(s_mapHandle, FILE_MAP_READ, 0, 0, sizeof(T));
-	}
-	if (s_sharedData == nullptr) {
-		throw - 3;
-	}
-};
+template<typename T>
+SharedMemory<T>::SharedMemory(key_t s_key, Permission s_permission)
+	: s_writeable(s_permission == CREATE_RW || s_permission == OPEN_RW)
+{
+    s_fileHandle = s_key;
+    init();
+}
 
 template<typename T>
 SharedMemory<T>::~SharedMemory()
 {
-	// 释放共享内存
-	if (s_sharedData != nullptr) UnmapViewOfFile(s_sharedData);
+    if (s_sharedData !=nullptr)
+    {
+        shmdt(s_sharedData);
+    }
 
-	// 关闭对象句柄
-	if (s_mapHandle != nullptr) CloseHandle(s_mapHandle);
+    if (s_mapHandle != -1)
+    {
+        shmctl(s_mapHandle,IPC_RMID, NULL);
+    }
 };
 
 template<typename T>
@@ -72,8 +71,7 @@ bool SharedMemory<T>::read(T* output) {
 
 	memcpy(output, s_sharedData, sizeof(T));
 	return true;
-
-}
+};
 
 template<typename T>
 bool SharedMemory<T>::write(T* input) {
@@ -87,5 +85,21 @@ bool SharedMemory<T>::write(T* input) {
 
 	memcpy(s_sharedData, input, sizeof(T));
 	return 0;
-}
+};
 
+template<typename T>
+void SharedMemory<T>::init() {
+    s_mapHandle = shmget(s_fileHandle ,sizeof(T), IPC_CREAT);
+    if (s_mapHandle == -1)
+    {
+        throw -2;
+    }
+
+    s_sharedData = (T*)shmat(s_mapHandle, NULL, 0);
+    if (s_sharedData == nullptr)
+    {
+        throw -3;
+    }
+
+    memset(s_sharedData, 0, sizeof(T));
+};
