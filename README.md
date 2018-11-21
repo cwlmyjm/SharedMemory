@@ -11,7 +11,6 @@ A: It now support Ubuntu!
 
 ```
 #include <iostream>
-#include <unistd.h>
 #include "SharedMemory.h"
 
 using namespace std;
@@ -54,7 +53,6 @@ int main()
 
 ```
 #include <iostream>
-#include <unistd.h>
 #include "SharedMemory.h"
 
 using namespace std;
