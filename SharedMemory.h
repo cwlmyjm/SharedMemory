@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <Windows.h>
 
 enum Permission {
@@ -23,6 +23,8 @@ public:
 
 	bool read(T* output);
 	bool write(T* input);
+	T* get();
+
 private:
 	bool s_writeable;
 	HANDLE s_mapHandle;
@@ -86,6 +88,10 @@ bool SharedMemory<T>::write(T* input) {
 	}
 
 	memcpy(s_sharedData, input, sizeof(T));
-	return 0;
+	return true;
 }
 
+template<typename T>
+T* SharedMemory<T>::get() {
+	return s_sharedData;
+};
