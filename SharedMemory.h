@@ -1,5 +1,6 @@
 #pragma once
 #include <Windows.h>
+#include <functional>
 
 enum Permission {
 	CREATE_RW,
@@ -19,10 +20,14 @@ class SharedMemory
 {
 public:
 	SharedMemory(const _CHAR* s_name, Permission s_permission);
+	SharedMemory(const _CHAR* s_name, Permission s_permission, T* s_default);
 	~SharedMemory();
 
 	bool read(T* output);
 	bool write(T* input);
+
+	template<typename R>
+	R apply(std::function<R (T*)> fun);
 	T* get();
 
 private:
@@ -54,6 +59,17 @@ SharedMemory<T>::SharedMemory(const _CHAR* s_name, Permission s_permission)
 	if (s_sharedData == nullptr) {
 		throw - 3;
 	}
+};
+
+template<typename T>
+SharedMemory<T>::SharedMemory(const _CHAR* s_name, Permission s_permission, T* s_default)
+	: SharedMemory(s_name, s_permission)
+{
+	if (s_default == nullptr)
+	{
+		throw - 4;
+	}
+	memcpy(s_sharedData, s_default, sizeof(T));
 };
 
 template<typename T>
@@ -90,6 +106,13 @@ bool SharedMemory<T>::write(T* input) {
 	memcpy(s_sharedData, input, sizeof(T));
 	return true;
 }
+
+template<typename T>
+template<typename R>
+R SharedMemory<T>::apply(std::function<R(T*)> fun)
+{
+	return fun(s_sharedData);
+};
 
 template<typename T>
 T* SharedMemory<T>::get() {
