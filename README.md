@@ -5,10 +5,12 @@ Q: What does the header do?
 A: This is a template for shared memory.
 
 Q: How many platforms it support?  
-A: It only support Windows now.
+~~A: It only support Windows now.~~  
+A: I have implemented linux version! I put it in linux branch!
 
 Q: Does it has mutex in reading or writing?  
-A: No, you can implement mutex by yourself.
+~~A: No, you can implement mutex by yourself.~~  
+A: I have implemented mutex version! Try MutexSharedMemory!
 
 Q: How to create a SharedMemory with specific length, like 10 bytes?  
 A: Define a struct contian 10 bytes or use char\[10\] as T.
@@ -22,6 +24,9 @@ Example one
 Example two
     SharedMemory<char[10]> sm("SharedMemory", CREATE_RW);
 ```
+
+Q: How to create a SharedMemory with initial value?  
+A: Use constructer to pass initial value!
 
 ## How to use it?
 
