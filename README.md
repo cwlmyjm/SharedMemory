@@ -53,7 +53,7 @@ int main()
 		cout << error << endl;
 	}
 	system("pause");
-    return 0;
+	return 0;
 }
 ```
 
@@ -80,6 +80,6 @@ int main()
 		cout << error << endl;
 	}
 	system("pause");
-    return 0;
+	return 0;
 }
 ```
