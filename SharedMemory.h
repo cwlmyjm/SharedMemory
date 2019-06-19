@@ -118,3 +118,81 @@ template<typename T>
 T* SharedMemory<T>::get() {
 	return s_sharedData;
 };
+
+template<typename T>
+class MutexSharedMemory
+	: public SharedMemory<T>
+{
+public:
+	MutexSharedMemory(const _CHAR* s_name, const _CHAR* m_name, Permission s_permission);
+	MutexSharedMemory(const _CHAR* s_name, const _CHAR* m_name, Permission s_permission, T* s_default);
+	~MutexSharedMemory();
+
+	bool mutex_read(T* output);
+	bool mutex_write(T* input);
+
+	template<typename R>
+	R mutex_apply(std::function<R(T*)> fun);
+private:
+	HANDLE mutexHandle = NULL;
+};
+
+template<typename T>
+MutexSharedMemory<T>::MutexSharedMemory(const _CHAR* s_name, const _CHAR* m_name, Permission s_permission)
+	: SharedMemory<T>(s_name, s_permission)
+{
+	mutexHandle = CreateMutex(NULL, false, m_name);
+};
+
+template<typename T>
+MutexSharedMemory<T>::MutexSharedMemory(const _CHAR* s_name, const _CHAR* m_name, Permission s_permission, T* s_default)
+	: SharedMemory<T>(s_name, s_permission, s_default)
+{
+	mutexHandle = CreateMutex(NULL, false, m_name);
+};
+
+template<typename T>
+MutexSharedMemory<T>::~MutexSharedMemory()
+{
+	if (mutexHandle != NULL)
+	{
+		CloseHandle(mutexHandle);
+	}
+};
+
+template<typename T>
+bool MutexSharedMemory<T>::mutex_read(T* output)
+{
+	bool result = false;
+	WaitForSingleObject(mutexHandle, INFINITE);
+	{
+		result = SharedMemory<T>::read(output);
+	}
+	ReleaseMutex(mutexHandle);
+	return result;
+};
+
+template<typename T>
+bool MutexSharedMemory<T>::mutex_write(T* input)
+{
+	bool result = false;
+	WaitForSingleObject(mutexHandle, INFINITE);
+	{
+		result = SharedMemory<T>::write(input);
+	}
+	ReleaseMutex(mutexHandle);
+	return result;
+};
+
+template<typename T>
+template<typename R>
+R MutexSharedMemory<T>::mutex_apply(std::function<R(T*)> fun)
+{
+	R result;
+	WaitForSingleObject(mutexHandle, INFINITE);
+	{
+		result = SharedMemory<T>::apply(fun);
+	}
+	ReleaseMutex(mutexHandle);
+	return result;
+}
