@@ -11,8 +11,10 @@ enum Permission {
 
 #ifdef UNICODE
 #define _CHAR wchar_t
+#define Format(str) L##str
 #else
 #define _CHAR char
+#define Format(str) str
 #endif
 
 template<typename T>
@@ -195,4 +197,105 @@ R MutexSharedMemory<T>::mutex_apply(std::function<R(T*)> fun)
 	}
 	ReleaseMutex(mutexHandle);
 	return result;
+}
+
+template<typename T, int C>
+class SharedMemoryBuffer
+{
+public:
+	SharedMemoryBuffer(const _CHAR* s_name, const _CHAR* sem_name, Permission s_permission);
+	~SharedMemoryBuffer();
+
+	bool read(T* output);
+	bool write(T* input);
+
+private:
+	bool s_writeable;
+	HANDLE s_mapHandle;
+	T* s_sharedData;
+	int readIndex = 0;
+	int writeIndex = 0;
+	HANDLE readSemHandle = NULL;
+	HANDLE writeSemHandle = NULL;
+};
+
+template<typename T, int C>
+SharedMemoryBuffer<T, C>::SharedMemoryBuffer(const _CHAR* s_name, const _CHAR* sem_name, Permission s_permission)
+	: s_writeable(s_permission == CREATE_RW || s_permission == OPEN_RW)
+{
+	if (s_permission == CREATE_RW || s_permission == CREATE_R) {
+		s_mapHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(T) * C, s_name);
+	}
+	else {
+		s_mapHandle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, s_name);
+	}
+	if (s_mapHandle == nullptr) {
+		throw - 2;
+	}
+
+	if (s_writeable) {
+		s_sharedData = (T*)MapViewOfFile(s_mapHandle, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(T) * C);
+	}
+	else {
+		s_sharedData = (T*)MapViewOfFile(s_mapHandle, FILE_MAP_READ, 0, 0, sizeof(T) * C);
+	}
+	if (s_sharedData == nullptr) {
+		throw - 3;
+	}
+
+	_CHAR readSemName[128] = { 0 };
+	_CHAR writeSemName[128] = { 0 };
+	wsprintf(readSemName, Format("%sRead"), sem_name);
+	wsprintf(writeSemName, Format("%sWrite"), sem_name);
+	readSemHandle = CreateSemaphore(NULL, 0, C, readSemName);
+	writeSemHandle = CreateSemaphore(NULL, C, C, writeSemName);
+}
+
+template<typename T, int C>
+SharedMemoryBuffer<T, C>::~SharedMemoryBuffer()
+{
+	// 释放共享内存
+	if (s_sharedData != nullptr) UnmapViewOfFile(s_sharedData);
+
+	// 关闭对象句柄
+	if (s_mapHandle != nullptr) CloseHandle(s_mapHandle);
+
+	CloseHandle(readSemHandle);
+	CloseHandle(writeSemHandle);
+}
+
+template<typename T, int C>
+bool SharedMemoryBuffer<T, C>::read(T* output)
+{
+	if (s_sharedData == nullptr) {
+		return false;
+	}
+
+	WaitForSingleObject(readSemHandle, INFINITE);
+	{
+		memcpy(output, s_sharedData + readIndex, sizeof(T));
+		readIndex = (readIndex + 1) % C;
+	}
+	ReleaseSemaphore(writeSemHandle, 1, NULL);
+	return true;
+}
+
+template<typename T, int C>
+bool SharedMemoryBuffer<T, C>::write(T* input)
+{
+	if (input == nullptr) {
+		return false;
+	}
+
+	if (!s_writeable) {
+		return false;
+	}
+
+	WaitForSingleObject(writeSemHandle, INFINITE);
+	{
+		memcpy(s_sharedData + writeIndex, input, sizeof(T));
+		writeIndex = (writeIndex + 1) % C;
+	}
+	ReleaseSemaphore(readSemHandle, 1, NULL);
+	return true;
 }
