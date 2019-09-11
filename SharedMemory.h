@@ -2,6 +2,12 @@
 #include <Windows.h>
 #include <functional>
 
+#ifdef _DEBUG
+#include <assert.h>
+#else
+#define assert(exp)
+#endif
+
 #ifdef UNICODE
 #define _CHAR wchar_t
 #define Format(str) L##str
@@ -52,11 +58,17 @@ namespace SharedMemoryTemplate{
 	SharedMemory<T>::SharedMemory(const _CHAR* s_name, Permission s_permission)
 		: s_writeable(s_permission == CREATE_RW || s_permission == OPEN_RW)
 	{
-		if (s_permission == CREATE_RW || s_permission == CREATE_R) {
+		if (s_permission == CREATE_RW) {
 			s_mapHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(T), s_name);
 		}
-		else {
+		else if (s_permission == CREATE_R) {
+			s_mapHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READONLY, 0, sizeof(T), s_name);
+		}
+		else if(s_permission == OPEN_RW){
 			s_mapHandle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, s_name);
+		}
+		else if (s_permission == OPEN_R){
+			s_mapHandle = OpenFileMapping(FILE_MAP_READ, FALSE, s_name);
 		}
 		if (s_mapHandle == nullptr) {
 			throw ErrorCode::Error_NullMapHandle;
@@ -96,7 +108,10 @@ namespace SharedMemoryTemplate{
 
 	template<typename T>
 	bool SharedMemory<T>::read(T* output) {
-		if (s_sharedData == nullptr) {
+
+		assert(output != nullptr);
+
+		if (output == nullptr) {
 			return false;
 		}
 
@@ -107,9 +122,14 @@ namespace SharedMemoryTemplate{
 
 	template<typename T>
 	bool SharedMemory<T>::write(T* input) {
+
+		assert(input != nullptr);
+
 		if (input == nullptr) {
 			return false;
 		}
+
+		assert(s_writeable);
 
 		if (!s_writeable) {
 			return false;
@@ -233,11 +253,17 @@ namespace SharedMemoryTemplate{
 	SharedMemoryBuffer<T, C>::SharedMemoryBuffer(const _CHAR* s_name, const _CHAR* sem_name, Permission s_permission)
 		: s_writeable(s_permission == CREATE_RW || s_permission == OPEN_RW)
 	{
-		if (s_permission == CREATE_RW || s_permission == CREATE_R) {
+		if (s_permission == CREATE_RW) {
 			s_mapHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(T) * C, s_name);
 		}
-		else {
+		else if (s_permission == CREATE_R) {
+			s_mapHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READONLY, 0, sizeof(T) * C, s_name);
+		}
+		else if (s_permission == OPEN_RW){
 			s_mapHandle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, s_name);
+		}
+		else if (s_permission == OPEN_R){
+			s_mapHandle = OpenFileMapping(FILE_MAP_READ, FALSE, s_name);
 		}
 		if (s_mapHandle == nullptr) {
 			throw ErrorCode::Error_NullMapHandle;
@@ -277,7 +303,9 @@ namespace SharedMemoryTemplate{
 	template<typename T, int C>
 	bool SharedMemoryBuffer<T, C>::read(T* output)
 	{
-		if (s_sharedData == nullptr) {
+		assert(output != nullptr);
+
+		if (output == nullptr) {
 			return false;
 		}
 
@@ -293,9 +321,13 @@ namespace SharedMemoryTemplate{
 	template<typename T, int C>
 	bool SharedMemoryBuffer<T, C>::write(T* input)
 	{
+		assert(input != nullptr);
+		
 		if (input == nullptr) {
 			return false;
 		}
+
+		assert(s_writeable);
 
 		if (!s_writeable) {
 			return false;
