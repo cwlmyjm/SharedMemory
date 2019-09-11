@@ -35,6 +35,7 @@ A: Use constructer to pass initial value!
 #include "SharedMemory.h"
 
 using namespace std;
+using namespace SharedMemoryTemplate;
 
 int main()
 {
@@ -48,7 +49,7 @@ int main()
 			a++;
 		}
 	}
-	catch (int error)
+	catch (ErrorCode error)
 	{
 		cout << error << endl;
 	}
@@ -62,6 +63,7 @@ int main()
 #include "SharedMemory.h"
 
 using namespace std;
+using namespace SharedMemoryTemplate;
 
 int main()
 {
@@ -75,7 +77,7 @@ int main()
 			cout << a << endl;
 		}
 	}
-	catch (int error)
+	catch (ErrorCode error)
 	{
 		cout << error << endl;
 	}
