@@ -1,3 +1,11 @@
+/*!
+* @file   SharedMemory.h
+* @author Jinming YAO
+* @param  Email: me@ysyy.xyz
+* @date   2018_04_26
+* @template for shared memory
+*/
+
 #pragma once
 #include <Windows.h>
 #include <functional>
@@ -37,105 +45,105 @@ namespace SharedMemoryTemplate{
 	class SharedMemory
 	{
 	public:
-		SharedMemory(const _CHAR* s_name, Permission s_permission);
-		SharedMemory(const _CHAR* s_name, Permission s_permission, T* s_default);
+		SharedMemory(const _CHAR* name, Permission permission);
+		SharedMemory(const _CHAR* name, Permission permission, T* pDefault);
 		~SharedMemory();
 
-		bool read(T* output);
-		bool write(T* input);
+		bool read(T* pOutput);
+		bool write(T* pInput);
 
 		template<typename R>
 		R apply(std::function<R(T*)> fun);
 		T* get();
 
 	private:
-		bool s_writeable;
-		HANDLE s_mapHandle;
-		T* s_sharedData;
+		bool m_writeable;
+		HANDLE m_mapHandle;
+		T* m_sharedData;
 	};
 
 	template<typename T>
-	SharedMemory<T>::SharedMemory(const _CHAR* s_name, Permission s_permission)
-		: s_writeable(s_permission == CREATE_RW || s_permission == OPEN_RW)
+	SharedMemory<T>::SharedMemory(const _CHAR* name, Permission permission)
+		: m_writeable(permission == CREATE_RW || permission == OPEN_RW)
 	{
-		if (s_permission == CREATE_RW) {
-			s_mapHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(T), s_name);
+		if (permission == CREATE_RW) {
+			m_mapHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(T), name);
 		}
-		else if (s_permission == CREATE_R) {
-			s_mapHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READONLY, 0, sizeof(T), s_name);
+		else if (permission == CREATE_R) {
+			m_mapHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READONLY, 0, sizeof(T), name);
 		}
-		else if(s_permission == OPEN_RW){
-			s_mapHandle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, s_name);
+		else if(permission == OPEN_RW){
+			m_mapHandle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, name);
 		}
-		else if (s_permission == OPEN_R){
-			s_mapHandle = OpenFileMapping(FILE_MAP_READ, FALSE, s_name);
+		else if (permission == OPEN_R){
+			m_mapHandle = OpenFileMapping(FILE_MAP_READ, FALSE, name);
 		}
-		if (s_mapHandle == nullptr) {
+		if (m_mapHandle == nullptr) {
 			throw ErrorCode::Error_NullMapHandle;
 		}
 
-		if (s_writeable) {
-			s_sharedData = (T*)MapViewOfFile(s_mapHandle, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(T));
+		if (m_writeable) {
+			m_sharedData = (T*)MapViewOfFile(m_mapHandle, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(T));
 		}
 		else {
-			s_sharedData = (T*)MapViewOfFile(s_mapHandle, FILE_MAP_READ, 0, 0, sizeof(T));
+			m_sharedData = (T*)MapViewOfFile(m_mapHandle, FILE_MAP_READ, 0, 0, sizeof(T));
 		}
-		if (s_sharedData == nullptr) {
+		if (m_sharedData == nullptr) {
 			throw ErrorCode::Error_NullMapView;
 		}
 	};
 
 	template<typename T>
-	SharedMemory<T>::SharedMemory(const _CHAR* s_name, Permission s_permission, T* s_default)
-		: SharedMemory(s_name, s_permission)
+	SharedMemory<T>::SharedMemory(const _CHAR* name, Permission permission, T* pDefault)
+		: SharedMemory(name, permission)
 	{
-		if (s_default == nullptr)
+		if (pDefault == nullptr)
 		{
 			throw ErrorCode::Error_NullDefault;
 		}
-		memcpy(s_sharedData, s_default, sizeof(T));
+		memcpy(m_sharedData, pDefault, sizeof(T));
 	};
 
 	template<typename T>
 	SharedMemory<T>::~SharedMemory()
 	{
 		// 释放共享内存
-		if (s_sharedData != nullptr) UnmapViewOfFile(s_sharedData);
+		if (m_sharedData != nullptr) UnmapViewOfFile(m_sharedData);
 
 		// 关闭对象句柄
-		if (s_mapHandle != nullptr) CloseHandle(s_mapHandle);
+		if (m_mapHandle != nullptr) CloseHandle(m_mapHandle);
 	};
 
 	template<typename T>
-	bool SharedMemory<T>::read(T* output) {
+	bool SharedMemory<T>::read(T* pOutput) {
 
-		assert(output != nullptr);
+		assert(pOutput != nullptr);
 
-		if (output == nullptr) {
+		if (pOutput == nullptr) {
 			return false;
 		}
 
-		memcpy(output, s_sharedData, sizeof(T));
+		memcpy(pOutput, m_sharedData, sizeof(T));
 		return true;
 
 	}
 
 	template<typename T>
-	bool SharedMemory<T>::write(T* input) {
+	bool SharedMemory<T>::write(T* pInput) {
 
-		assert(input != nullptr);
+		assert(pInput != nullptr);
 
-		if (input == nullptr) {
+		if (pInput == nullptr) {
 			return false;
 		}
 
-		assert(s_writeable);
+		assert(m_writeable);
 
-		if (!s_writeable) {
+		if (!m_writeable) {
 			return false;
 		}
 
-		memcpy(s_sharedData, input, sizeof(T));
+		memcpy(m_sharedData, pInput, sizeof(T));
 		return true;
 	}
 
@@ -143,12 +151,12 @@ namespace SharedMemoryTemplate{
 	template<typename R>
 	R SharedMemory<T>::apply(std::function<R(T*)> fun)
 	{
-		return fun(s_sharedData);
+		return fun(m_sharedData);
 	};
 
 	template<typename T>
 	T* SharedMemory<T>::get() {
-		return s_sharedData;
+		return m_sharedData;
 	};
 
 	template<typename T>
@@ -156,63 +164,63 @@ namespace SharedMemoryTemplate{
 		: public SharedMemory < T >
 	{
 	public:
-		MutexSharedMemory(const _CHAR* s_name, const _CHAR* m_name, Permission s_permission);
-		MutexSharedMemory(const _CHAR* s_name, const _CHAR* m_name, Permission s_permission, T* s_default);
+		MutexSharedMemory(const _CHAR* name, const _CHAR* mutexName, Permission permission);
+		MutexSharedMemory(const _CHAR* name, const _CHAR* mutexName, Permission permission, T* pDefault);
 		~MutexSharedMemory();
 
-		bool mutex_read(T* output);
-		bool mutex_write(T* input);
+		bool mutex_read(T* pOutput);
+		bool mutex_write(T* pInput);
 
 		template<typename R>
 		R mutex_apply(std::function<R(T*)> fun);
 	private:
-		HANDLE mutexHandle = NULL;
+		HANDLE m_mutexHandle = NULL;
 	};
 
 	template<typename T>
-	MutexSharedMemory<T>::MutexSharedMemory(const _CHAR* s_name, const _CHAR* m_name, Permission s_permission)
-		: SharedMemory<T>(s_name, s_permission)
+	MutexSharedMemory<T>::MutexSharedMemory(const _CHAR* name, const _CHAR* mutexName, Permission permission)
+		: SharedMemory<T>(name, permission)
 	{
-		mutexHandle = CreateMutex(NULL, false, m_name);
+		m_mutexHandle = CreateMutex(NULL, false, mutexName);
 	};
 
 	template<typename T>
-	MutexSharedMemory<T>::MutexSharedMemory(const _CHAR* s_name, const _CHAR* m_name, Permission s_permission, T* s_default)
-		: SharedMemory<T>(s_name, s_permission, s_default)
+	MutexSharedMemory<T>::MutexSharedMemory(const _CHAR* name, const _CHAR* mutexName, Permission permission, T* pDefault)
+		: SharedMemory<T>(name, permission, pDefault)
 	{
-		mutexHandle = CreateMutex(NULL, false, m_name);
+		m_mutexHandle = CreateMutex(NULL, false, mutexName);
 	};
 
 	template<typename T>
 	MutexSharedMemory<T>::~MutexSharedMemory()
 	{
-		if (mutexHandle != NULL)
+		if (m_mutexHandle != NULL)
 		{
-			CloseHandle(mutexHandle);
+			CloseHandle(m_mutexHandle);
 		}
 	};
 
 	template<typename T>
-	bool MutexSharedMemory<T>::mutex_read(T* output)
+	bool MutexSharedMemory<T>::mutex_read(T* pOutput)
 	{
 		bool result = false;
-		WaitForSingleObject(mutexHandle, INFINITE);
+		WaitForSingleObject(m_mutexHandle, INFINITE);
 		{
-			result = SharedMemory<T>::read(output);
+			result = SharedMemory<T>::read(pOutput);
 		}
-		ReleaseMutex(mutexHandle);
+		ReleaseMutex(m_mutexHandle);
 		return result;
 	};
 
 	template<typename T>
-	bool MutexSharedMemory<T>::mutex_write(T* input)
+	bool MutexSharedMemory<T>::mutex_write(T* pInput)
 	{
 		bool result = false;
-		WaitForSingleObject(mutexHandle, INFINITE);
+		WaitForSingleObject(m_mutexHandle, INFINITE);
 		{
-			result = SharedMemory<T>::write(input);
+			result = SharedMemory<T>::write(pInput);
 		}
-		ReleaseMutex(mutexHandle);
+		ReleaseMutex(m_mutexHandle);
 		return result;
 	};
 
@@ -221,11 +229,11 @@ namespace SharedMemoryTemplate{
 	R MutexSharedMemory<T>::mutex_apply(std::function<R(T*)> fun)
 	{
 		R result;
-		WaitForSingleObject(mutexHandle, INFINITE);
+		WaitForSingleObject(m_mutexHandle, INFINITE);
 		{
 			result = SharedMemory<T>::apply(fun);
 		}
-		ReleaseMutex(mutexHandle);
+		ReleaseMutex(m_mutexHandle);
 		return result;
 	}
 
@@ -233,112 +241,112 @@ namespace SharedMemoryTemplate{
 	class SharedMemoryBuffer
 	{
 	public:
-		SharedMemoryBuffer(const _CHAR* s_name, const _CHAR* sem_name, Permission s_permission);
+		SharedMemoryBuffer(const _CHAR* name, const _CHAR* semName, Permission permission);
 		~SharedMemoryBuffer();
 
-		bool read(T* output);
-		bool write(T* input);
+		bool read(T* pOutput);
+		bool write(T* pInput);
 
 	private:
-		bool s_writeable;
-		HANDLE s_mapHandle;
-		T* s_sharedData;
-		int readIndex = 0;
-		int writeIndex = 0;
-		HANDLE readSemHandle = NULL;
-		HANDLE writeSemHandle = NULL;
+		bool m_writeable;
+		HANDLE m_mapHandle;
+		T* m_sharedData;
+		int m_readIndex = 0;
+		int m_writeIndex = 0;
+		HANDLE m_readSemHandle = NULL;
+		HANDLE m_writeSemHandle = NULL;
 	};
 
 	template<typename T, int C>
-	SharedMemoryBuffer<T, C>::SharedMemoryBuffer(const _CHAR* s_name, const _CHAR* sem_name, Permission s_permission)
-		: s_writeable(s_permission == CREATE_RW || s_permission == OPEN_RW)
+	SharedMemoryBuffer<T, C>::SharedMemoryBuffer(const _CHAR* name, const _CHAR* semName, Permission permission)
+		: m_writeable(permission == CREATE_RW || permission == OPEN_RW)
 	{
-		if (s_permission == CREATE_RW) {
-			s_mapHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(T) * C, s_name);
+		if (permission == CREATE_RW) {
+			m_mapHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(T) * C, name);
 		}
-		else if (s_permission == CREATE_R) {
-			s_mapHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READONLY, 0, sizeof(T) * C, s_name);
+		else if (permission == CREATE_R) {
+			m_mapHandle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READONLY, 0, sizeof(T) * C, name);
 		}
-		else if (s_permission == OPEN_RW){
-			s_mapHandle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, s_name);
+		else if (permission == OPEN_RW){
+			m_mapHandle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, name);
 		}
 		else if (s_permission == OPEN_R){
-			s_mapHandle = OpenFileMapping(FILE_MAP_READ, FALSE, s_name);
+			m_mapHandle = OpenFileMapping(FILE_MAP_READ, FALSE, name);
 		}
-		if (s_mapHandle == nullptr) {
+		if (m_mapHandle == nullptr) {
 			throw ErrorCode::Error_NullMapHandle;
 		}
 
-		if (s_writeable) {
-			s_sharedData = (T*)MapViewOfFile(s_mapHandle, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(T) * C);
+		if (m_writeable) {
+			m_sharedData = (T*)MapViewOfFile(m_mapHandle, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(T) * C);
 		}
 		else {
-			s_sharedData = (T*)MapViewOfFile(s_mapHandle, FILE_MAP_READ, 0, 0, sizeof(T) * C);
+			m_sharedData = (T*)MapViewOfFile(m_mapHandle, FILE_MAP_READ, 0, 0, sizeof(T) * C);
 		}
-		if (s_sharedData == nullptr) {
+		if (m_sharedData == nullptr) {
 			throw ErrorCode::Error_NullMapView;
 		}
 
 		_CHAR readSemName[128] = { 0 };
 		_CHAR writeSemName[128] = { 0 };
-		wsprintf(readSemName, Format("%sRead"), sem_name);
-		wsprintf(writeSemName, Format("%sWrite"), sem_name);
-		readSemHandle = CreateSemaphore(NULL, 0, C, readSemName);
-		writeSemHandle = CreateSemaphore(NULL, C, C, writeSemName);
+		wsprintf(m_readSemName, Format("%sRead"), semName);
+		wsprintf(m_writeSemName, Format("%sWrite"), semName);
+		m_readSemHandle = CreateSemaphore(NULL, 0, C, m_readSemName);
+		m_writeSemHandle = CreateSemaphore(NULL, C, C, m_writeSemName);
 	}
 
 	template<typename T, int C>
 	SharedMemoryBuffer<T, C>::~SharedMemoryBuffer()
 	{
 		// 释放共享内存
-		if (s_sharedData != nullptr) UnmapViewOfFile(s_sharedData);
+		if (m_sharedData != nullptr) UnmapViewOfFile(m_sharedData);
 
 		// 关闭对象句柄
-		if (s_mapHandle != nullptr) CloseHandle(s_mapHandle);
+		if (m_mapHandle != nullptr) CloseHandle(m_mapHandle);
 
-		CloseHandle(readSemHandle);
-		CloseHandle(writeSemHandle);
+		CloseHandle(m_readSemHandle);
+		CloseHandle(m_writeSemHandle);
 	}
 
 	template<typename T, int C>
-	bool SharedMemoryBuffer<T, C>::read(T* output)
+	bool SharedMemoryBuffer<T, C>::read(T* pOutput)
 	{
-		assert(output != nullptr);
+		assert(pOutput != nullptr);
 
-		if (output == nullptr) {
+		if (pOutput == nullptr) {
 			return false;
 		}
 
-		WaitForSingleObject(readSemHandle, INFINITE);
+		WaitForSingleObject(m_readSemHandle, INFINITE);
 		{
-			memcpy(output, s_sharedData + readIndex, sizeof(T));
-			readIndex = (readIndex + 1) % C;
+			memcpy(pOutput, m_sharedData + m_readIndex, sizeof(T));
+			m_readIndex = (m_readIndex + 1) % C;
 		}
-		ReleaseSemaphore(writeSemHandle, 1, NULL);
+		ReleaseSemaphore(m_writeSemHandle, 1, NULL);
 		return true;
 	}
 
 	template<typename T, int C>
-	bool SharedMemoryBuffer<T, C>::write(T* input)
+	bool SharedMemoryBuffer<T, C>::write(T* pInput)
 	{
-		assert(input != nullptr);
+		assert(pInput != nullptr);
 		
-		if (input == nullptr) {
+		if (pInput == nullptr) {
 			return false;
 		}
 
-		assert(s_writeable);
+		assert(m_writeable);
 
-		if (!s_writeable) {
+		if (!m_writeable) {
 			return false;
 		}
 
-		WaitForSingleObject(writeSemHandle, INFINITE);
+		WaitForSingleObject(m_writeSemHandle, INFINITE);
 		{
-			memcpy(s_sharedData + writeIndex, input, sizeof(T));
-			writeIndex = (writeIndex + 1) % C;
+			memcpy(m_sharedData + m_writeIndex, pInput, sizeof(T));
+			m_writeIndex = (m_writeIndex + 1) % C;
 		}
-		ReleaseSemaphore(readSemHandle, 1, NULL);
+		ReleaseSemaphore(m_readSemHandle, 1, NULL);
 		return true;
 	}
 }
