@@ -163,6 +163,24 @@ namespace SharedMemoryTemplate{
 	class MutexSharedMemory
 		: public SharedMemory < T >
 	{
+	private:
+		class Mutex
+		{
+		private:
+			HANDLE m_handle;
+		public:
+			Mutex(HANDLE handle)
+				: m_handle(handle)
+			{
+				WaitForSingleObject(m_handle, INFINITE);
+			}
+
+			~Mutex()
+			{
+				ReleaseMutex(m_handle);
+			}
+		};
+
 	public:
 		MutexSharedMemory(const _CHAR* name, const _CHAR* mutexName, Permission permission);
 		MutexSharedMemory(const _CHAR* name, const _CHAR* mutexName, Permission permission, T* pDefault);
@@ -203,38 +221,23 @@ namespace SharedMemoryTemplate{
 	template<typename T>
 	bool MutexSharedMemory<T>::mutex_read(T* pOutput)
 	{
-		bool result = false;
-		WaitForSingleObject(m_mutexHandle, INFINITE);
-		{
-			result = SharedMemory<T>::read(pOutput);
-		}
-		ReleaseMutex(m_mutexHandle);
-		return result;
+		Mutex mutex(m_mutexHandle);
+		return SharedMemory<T>::read(pOutput);
 	};
 
 	template<typename T>
 	bool MutexSharedMemory<T>::mutex_write(T* pInput)
 	{
-		bool result = false;
-		WaitForSingleObject(m_mutexHandle, INFINITE);
-		{
-			result = SharedMemory<T>::write(pInput);
-		}
-		ReleaseMutex(m_mutexHandle);
-		return result;
+		Mutex mutex(m_mutexHandle);
+		return SharedMemory<T>::write(pInput);
 	};
 
 	template<typename T>
 	template<typename R>
 	R MutexSharedMemory<T>::mutex_apply(std::function<R(T*)> fun)
 	{
-		R result;
-		WaitForSingleObject(m_mutexHandle, INFINITE);
-		{
-			result = SharedMemory<T>::apply(fun);
-		}
-		ReleaseMutex(m_mutexHandle);
-		return result;
+		Mutex mutex(m_mutexHandle);
+		return SharedMemory<T>::apply(fun);
 	}
 
 	template<typename T, int C>
