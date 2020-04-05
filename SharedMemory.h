@@ -47,6 +47,7 @@ namespace SharedMemoryTemplate{
 	public:
 		SharedMemory(const _CHAR* name, Permission permission);
 		SharedMemory(const _CHAR* name, Permission permission, T* pDefault);
+		SharedMemory(const SharedMemory<T>& other) = delete;
 		~SharedMemory();
 
 		bool read(T* pOutput);
@@ -184,6 +185,7 @@ namespace SharedMemoryTemplate{
 	public:
 		MutexSharedMemory(const _CHAR* name, const _CHAR* mutexName, Permission permission);
 		MutexSharedMemory(const _CHAR* name, const _CHAR* mutexName, Permission permission, T* pDefault);
+		MutexSharedMemory(const MutexSharedMemory<T>& other) = delete;
 		~MutexSharedMemory();
 
 		bool mutex_read(T* pOutput);
@@ -245,6 +247,7 @@ namespace SharedMemoryTemplate{
 	{
 	public:
 		SharedMemoryBuffer(const _CHAR* name, const _CHAR* semName, Permission permission);
+		SharedMemoryBuffer(const SharedMemoryBuffer<T, C>& other) = delete;
 		~SharedMemoryBuffer();
 
 		bool read(T* pOutput);
@@ -273,7 +276,7 @@ namespace SharedMemoryTemplate{
 		else if (permission == OPEN_RW){
 			m_mapHandle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, name);
 		}
-		else if (s_permission == OPEN_R){
+		else if (permission == OPEN_R){
 			m_mapHandle = OpenFileMapping(FILE_MAP_READ, FALSE, name);
 		}
 		if (m_mapHandle == nullptr) {
@@ -292,10 +295,10 @@ namespace SharedMemoryTemplate{
 
 		_CHAR readSemName[128] = { 0 };
 		_CHAR writeSemName[128] = { 0 };
-		wsprintf(m_readSemName, Format("%sRead"), semName);
-		wsprintf(m_writeSemName, Format("%sWrite"), semName);
-		m_readSemHandle = CreateSemaphore(NULL, 0, C, m_readSemName);
-		m_writeSemHandle = CreateSemaphore(NULL, C, C, m_writeSemName);
+		wsprintf(readSemName, Format("%sRead"), semName);
+		wsprintf(writeSemName, Format("%sWrite"), semName);
+		m_readSemHandle = CreateSemaphore(NULL, 0, C, readSemName);
+		m_writeSemHandle = CreateSemaphore(NULL, C, C, writeSemName);
 	}
 
 	template<typename T, int C>
