@@ -49,6 +49,7 @@ namespace SharedMemoryTemplate{
 		SharedMemory(const _CHAR* name, Permission permission, T* pDefault);
 		SharedMemory(const SharedMemory<T>& other) = delete;
 		~SharedMemory();
+		SharedMemory<T>& operator=(const SharedMemory<T>& other) = delete;
 
 		bool read(T* pOutput);
 		bool write(T* pInput);
@@ -187,6 +188,7 @@ namespace SharedMemoryTemplate{
 		MutexSharedMemory(const _CHAR* name, const _CHAR* mutexName, Permission permission, T* pDefault);
 		MutexSharedMemory(const MutexSharedMemory<T>& other) = delete;
 		~MutexSharedMemory();
+		MutexSharedMemory<T>& operator=(const MutexSharedMemory<T>& other) = delete;
 
 		bool mutex_read(T* pOutput);
 		bool mutex_write(T* pInput);
@@ -249,6 +251,7 @@ namespace SharedMemoryTemplate{
 		SharedMemoryBuffer(const _CHAR* name, const _CHAR* semName, Permission permission);
 		SharedMemoryBuffer(const SharedMemoryBuffer<T, C>& other) = delete;
 		~SharedMemoryBuffer();
+		SharedMemoryBuffer<T, C>& operator=(const SharedMemoryBuffer<T, C>& other) = delete;
 
 		bool read(T* pOutput);
 		bool write(T* pInput);
