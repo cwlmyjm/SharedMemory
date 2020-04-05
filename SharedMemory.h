@@ -54,6 +54,9 @@ namespace SharedMemoryTemplate{
 		bool read(T* pOutput);
 		bool write(T* pInput);
 
+		bool read_void(void* pOutput);
+		bool write_void(void* pInput);
+
 		template<typename R>
 		R apply(std::function<R(T*)> fun);
 		T* get();
@@ -150,6 +153,39 @@ namespace SharedMemoryTemplate{
 	}
 
 	template<typename T>
+	bool SharedMemory<T>::read_void(void* pOutput) {
+
+		assert(pOutput != nullptr);
+
+		if (pOutput == nullptr) {
+			return false;
+		}
+
+		memcpy(pOutput, m_sharedData, sizeof(T));
+		return true;
+
+	}
+
+	template<typename T>
+	bool SharedMemory<T>::write_void(void* pInput) {
+
+		assert(pInput != nullptr);
+
+		if (pInput == nullptr) {
+			return false;
+		}
+
+		assert(m_writeable);
+
+		if (!m_writeable) {
+			return false;
+		}
+
+		memcpy(m_sharedData, pInput, sizeof(T));
+		return true;
+	}
+
+	template<typename T>
 	template<typename R>
 	R SharedMemory<T>::apply(std::function<R(T*)> fun)
 	{
@@ -193,6 +229,9 @@ namespace SharedMemoryTemplate{
 		bool mutex_read(T* pOutput);
 		bool mutex_write(T* pInput);
 
+		bool mutex_read_void(void* pOutput);
+		bool mutex_write_void(void* pInput);
+
 		template<typename R>
 		R mutex_apply(std::function<R(T*)> fun);
 	private:
@@ -234,6 +273,20 @@ namespace SharedMemoryTemplate{
 	{
 		Mutex mutex(m_mutexHandle);
 		return SharedMemory<T>::write(pInput);
+	};
+
+	template<typename T>
+	bool MutexSharedMemory<T>::mutex_read_void(void* pOutput)
+	{
+		Mutex mutex(m_mutexHandle);
+		return SharedMemory<T>::read_void(pOutput);
+	};
+
+	template<typename T>
+	bool MutexSharedMemory<T>::mutex_write_void(void* pInput)
+	{
+		Mutex mutex(m_mutexHandle);
+		return SharedMemory<T>::write_void(pInput);
 	};
 
 	template<typename T>
